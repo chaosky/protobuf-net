@@ -1,4 +1,5 @@
 ﻿#if !NO_RUNTIME
+using CustomDataStruct;
 using System;
 
 namespace ProtoBuf.Serializers
@@ -16,13 +17,13 @@ namespace ProtoBuf.Serializers
 
         public override void Write(object value, ProtoWriter dest)
         {
-            ProtoWriter.WriteUInt16((ushort)(char)value, dest);
+            ProtoWriter.WriteUInt16((ushort)ValueObject.Value<char>(value), dest);
         }
 
         public override object Read(object value, ProtoReader source)
         {
             Helpers.DebugAssert(value == null); // since replaces
-            return (char)source.ReadUInt16();
+            return ValueObject.Get((char)source.ReadUInt16());
         }
 
         // no need for any special IL here; ushort and char are

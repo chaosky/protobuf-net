@@ -18,13 +18,14 @@ namespace ProtoBuf.Serializers
         public BlobSerializer(ProtoBuf.Meta.TypeModel model, bool overwriteList)
         {
             this.overwriteList = overwriteList;
+            this.model = model;
         }
 
         private readonly bool overwriteList;
-
+        private readonly Meta.TypeModel model;
         public object Read(object value, ProtoReader source)
         {
-            return ProtoReader.AppendBytes(overwriteList ? null : (byte[])value, source);
+            return ProtoReader.AppendBytes(overwriteList ? null : (byte[])value, source, model.bufferPoolDelegate);
         }
 
         public void Write(object value, ProtoWriter dest)

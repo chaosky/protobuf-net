@@ -4,7 +4,7 @@ using System;
 
 namespace ProtoBuf.Serializers
 {
-    interface IProtoSerializer
+    public interface IProtoSerializer
     {
         /// <summary>
         /// The type that this serializer is intended to work for.

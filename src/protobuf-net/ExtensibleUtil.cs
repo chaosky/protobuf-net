@@ -88,10 +88,16 @@ namespace ProtoBuf
             Stream stream = extn.BeginAppend();
             try
             {
-                using (ProtoWriter writer = ProtoWriter.Create(stream, model, null))
+                ProtoWriter writer = null;
+                try
                 {
+                    writer = ProtoWriter.Create(stream, model, null);
                     model.TrySerializeAuxiliaryType(writer, null, format, tag, value, false, null);
                     writer.Close();
+                }
+                finally
+                {
+                    ProtoWriter.Recycle(writer);
                 }
                 commit = true;
             }

@@ -12,6 +12,14 @@ namespace ProtoBuf.Meta
     /// </summary>
     public abstract partial class TypeModel
     {
+        // ========================================================
+        // added by wsh @ 2017-07-01 for net data pool
+        public delegate object NetDataPoolDelegate(Type protoType);
+        public NetDataPoolDelegate netDataPoolDelegate;
+        // added by wsh @ 2017-07-04 for byte[] pool
+        public delegate byte[] BufferPoolDelegate(int expectedSize);
+        public BufferPoolDelegate bufferPoolDelegate;
+        // ========================================================
 #if COREFX
         internal TypeInfo MapType(TypeInfo type)
         {
@@ -215,11 +223,17 @@ namespace ProtoBuf.Meta
         /// <param name="context">Additional information about this serialization operation.</param>
         public void Serialize(Stream dest, object value, SerializationContext context)
         {
-            using (ProtoWriter writer = ProtoWriter.Create(dest, this, context))
+            ProtoWriter writer = null;
+            try
             {
+                writer = ProtoWriter.Create(dest, this, context);
                 writer.SetRootObject(value);
                 SerializeCore(writer, value);
                 writer.Close();
+            }
+            finally
+            {
+                ProtoWriter.Recycle(writer);
             }
         }
 
@@ -538,8 +552,11 @@ namespace ProtoBuf.Meta
                 type = MapType(value.GetType());
             }
             int key = GetKey(ref type);
-            using (ProtoWriter writer = ProtoWriter.Create(dest, this, context))
+            ProtoWriter writer = null;
+            try
             {
+                writer = ProtoWriter.Create(dest, this, context);
+                
                 switch (style)
                 {
                     case PrefixStyle.None:
@@ -554,6 +571,10 @@ namespace ProtoBuf.Meta
                         throw new ArgumentOutOfRangeException("style");
                 }
                 writer.Close();
+            }
+            finally
+            {
+                ProtoWriter.Recycle(writer);
             }
         }
         /// <summary>
@@ -1380,11 +1401,17 @@ namespace ProtoBuf.Meta
             {
                 using (MemoryStream ms = new MemoryStream())
                 {
-                    using (ProtoWriter writer = ProtoWriter.Create(ms, this, null))
+                    ProtoWriter writer = null;
+                    try
                     {
+                        writer = ProtoWriter.Create(ms, this, null);
                         writer.SetRootObject(value);
                         Serialize(key, value, writer);
                         writer.Close();
+                    }
+                    finally
+                    {
+                        ProtoWriter.Recycle(writer);
                     }
                     ms.Position = 0;
                     ProtoReader reader = null;
@@ -1411,10 +1438,16 @@ namespace ProtoBuf.Meta
             }
             using (MemoryStream ms = new MemoryStream())
             {
-                using (ProtoWriter writer = ProtoWriter.Create(ms, this, null))
+                ProtoWriter writer = null;
+                try
                 {
+                    writer = ProtoWriter.Create(ms, this, null);
                     if (!TrySerializeAuxiliaryType(writer, type, DataFormat.Default, Serializer.ListItemTag, value, false, null)) ThrowUnexpectedType(type);
                     writer.Close();
+                }
+                finally
+                {
+                    ProtoWriter.Recycle(writer);
                 }
                 ms.Position = 0;
                 ProtoReader reader = null;

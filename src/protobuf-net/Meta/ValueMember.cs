@@ -574,6 +574,13 @@ namespace ProtoBuf.Meta
                 }
                 if (member != null)
                 {
+                    // added by wsh @ 2017-06-29
+                    // hook PropertyDecorator to avoid reflection for GC optimization
+                    if (CustomSerializerHook(parentType, _fieldNumber, ref ser))
+                    {
+                        return ser;
+                    }
+                    
                     if (member is PropertyInfo prop)
                     {
                         ser = new PropertyDecorator(model, parentType, prop, ser);
@@ -600,6 +607,19 @@ namespace ProtoBuf.Meta
             }
         }
 
+        private static bool CustomSerializerHook(Type targetType, int fieldNumber, ref IProtoSerializer serializer)
+        {
+            ICustomProtoSerializer customSerializer = CustomSetting.TryGetCustomSerializer(targetType);
+            if (customSerializer == null)
+            {
+                return false;
+            }
+
+            serializer = Activator.CreateInstance(typeof(CustomDecorator), 
+                new object[] { targetType, customSerializer, fieldNumber, serializer }) as IProtoSerializer;
+            return true;
+        }
+        
         private static WireType GetIntWireType(DataFormat format, int width)
         {
             switch (format)

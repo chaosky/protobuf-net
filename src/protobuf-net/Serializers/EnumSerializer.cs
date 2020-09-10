@@ -2,6 +2,7 @@
 using System;
 using ProtoBuf.Meta;
 using System.Reflection;
+using CustomDataStruct;
 
 namespace ProtoBuf.Serializers
 {
@@ -63,14 +64,15 @@ namespace ProtoBuf.Serializers
             {
                 switch (GetTypeCode())
                 { // unbox then convert to int
-                    case ProtoTypeCode.Byte: return (int)(byte)value;
-                    case ProtoTypeCode.SByte: return (int)(sbyte)value;
-                    case ProtoTypeCode.Int16: return (int)(short)value;
-                    case ProtoTypeCode.Int32: return (int)value;
-                    case ProtoTypeCode.Int64: return (int)(long)value;
-                    case ProtoTypeCode.UInt16: return (int)(ushort)value;
-                    case ProtoTypeCode.UInt32: return (int)(uint)value;
-                    case ProtoTypeCode.UInt64: return (int)(ulong)value;
+                    case ProtoTypeCode.Byte:
+                    case ProtoTypeCode.SByte:
+                    case ProtoTypeCode.Int16:
+                    case ProtoTypeCode.Int32:
+                    case ProtoTypeCode.Int64:
+                    case ProtoTypeCode.UInt16:
+                    case ProtoTypeCode.UInt32:
+                    case ProtoTypeCode.UInt64:
+                        return ValueObject.Value<int>(value);
                     default: throw new InvalidOperationException();
                 }
             }
@@ -82,14 +84,15 @@ namespace ProtoBuf.Serializers
             {
                 switch (GetTypeCode())
                 { // convert from int then box 
-                    case ProtoTypeCode.Byte: return Enum.ToObject(enumType, (byte)value);
-                    case ProtoTypeCode.SByte: return Enum.ToObject(enumType, (sbyte)value);
-                    case ProtoTypeCode.Int16: return Enum.ToObject(enumType, (short)value);
-                    case ProtoTypeCode.Int32: return Enum.ToObject(enumType, value);
-                    case ProtoTypeCode.Int64: return Enum.ToObject(enumType, (long)value);
-                    case ProtoTypeCode.UInt16: return Enum.ToObject(enumType, (ushort)value);
-                    case ProtoTypeCode.UInt32: return Enum.ToObject(enumType, (uint)value);
-                    case ProtoTypeCode.UInt64: return Enum.ToObject(enumType, (ulong)value);
+                    case ProtoTypeCode.Byte:
+                    case ProtoTypeCode.SByte:
+                    case ProtoTypeCode.Int16:
+                    case ProtoTypeCode.Int32:
+                    case ProtoTypeCode.Int64:
+                    case ProtoTypeCode.UInt16:
+                    case ProtoTypeCode.UInt32:
+                    case ProtoTypeCode.UInt64:
+                        return ValueObject.Get(value);
                     default: throw new InvalidOperationException();
                 }
             }

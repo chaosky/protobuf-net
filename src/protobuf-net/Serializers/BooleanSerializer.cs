@@ -1,4 +1,5 @@
 ﻿#if !NO_RUNTIME
+using CustomDataStruct;
 using System;
 
 namespace ProtoBuf.Serializers
@@ -13,13 +14,13 @@ namespace ProtoBuf.Serializers
 
         public void Write(object value, ProtoWriter dest)
         {
-            ProtoWriter.WriteBoolean((bool)value, dest);
+            ProtoWriter.WriteBoolean(ValueObject.Value<bool>(value), dest);
         }
 
         public object Read(object value, ProtoReader source)
         {
             Helpers.DebugAssert(value == null); // since replaces
-            return source.ReadBoolean();
+            return ValueObject.Get(source.ReadBoolean());
         }
 
         bool IProtoSerializer.RequiresOldValue => false;

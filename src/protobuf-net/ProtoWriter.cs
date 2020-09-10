@@ -426,16 +426,16 @@ namespace ProtoBuf
 
         }
 
-        /// <summary>
-        /// Creates a new writer against a stream
-        /// </summary>
-        /// <param name="dest">The destination stream</param>
-        /// <param name="model">The model to use for serialization; this can be null, but this will impair the ability to serialize sub-objects</param>
-        /// <param name="context">Additional context about this serialization operation</param>
-        public static ProtoWriter Create(Stream dest, TypeModel model, SerializationContext context = null)
-#pragma warning disable CS0618
-            => new ProtoWriter(dest, model, context);
-#pragma warning restore CS0618
+//         /// <summary>
+//         /// Creates a new writer against a stream
+//         /// </summary>
+//         /// <param name="dest">The destination stream</param>
+//         /// <param name="model">The model to use for serialization; this can be null, but this will impair the ability to serialize sub-objects</param>
+//         /// <param name="context">Additional context about this serialization operation</param>
+//         public static ProtoWriter Create(Stream dest, TypeModel model, SerializationContext context = null)
+// #pragma warning disable CS0618
+//             => new ProtoWriter(dest, model, context);
+// #pragma warning restore CS0618
 
         /// <summary>
         /// Creates a new writer against a stream
@@ -446,20 +446,31 @@ namespace ProtoBuf
         [Obsolete("Please use ProtoWriter.Create; this API may be removed in a future version", error: false)]
         public ProtoWriter(Stream dest, TypeModel model, SerializationContext context)
         {
+            Init(this, dest, model, context);
+        }
+
+        private static void Init(ProtoWriter writer, Stream dest, TypeModel model, SerializationContext context)
+        {
             if (dest == null) throw new ArgumentNullException("dest");
             if (!dest.CanWrite) throw new ArgumentException("Cannot write to stream", "dest");
             //if (model == null) throw new ArgumentNullException("model");
-            this.dest = dest;
-            this.ioBuffer = BufferPool.GetBuffer();
-            this.model = model;
-            this.wireType = WireType.None;
-            if (context == null) { context = SerializationContext.Default; }
-            else { context.Freeze(); }
-            this.context = context;
+            writer.dest = dest;
+            writer.ioBuffer = BufferPool.GetBuffer();
+            writer.model = model;
+            writer.wireType = WireType.None;
+            if (context == null)
+            {
+                context = SerializationContext.Default;
+            }
+            else
+            {
+                context.Freeze();
+            }
 
+            writer.context = context;
         }
 
-        private readonly SerializationContext context;
+        private SerializationContext context;
         /// <summary>
         /// Addition information about this serialization operation.
         /// </summary>
@@ -479,6 +490,8 @@ namespace ProtoBuf
             }
             model = null;
             BufferPool.ReleaseBufferToPool(ref ioBuffer);
+            if (netCache != null) netCache.Clear();
+            if (recursionStack != null) recursionStack.Clear();
         }
 
         private byte[] ioBuffer;
@@ -999,5 +1012,82 @@ namespace ProtoBuf
             if (writer == null) throw new ArgumentNullException(nameof(writer));
             WriteString(writer.SerializeType(value), writer);
         }
+        
+        #region RECYCLER
+        /// <summary>
+        /// Creates a new writer against a stream
+        /// </summary>
+        /// <param name="dest">The destination stream</param>
+        /// <param name="model">The model to use for serialization; this can be null, but this will impair the ability to serialize sub-objects</param>
+        /// <param name="context">Additional context about this serialization operation</param>
+        public static ProtoWriter Create(Stream dest, TypeModel model, SerializationContext context = null)
+        {
+            ProtoWriter writer = GetRecycled();
+            if (writer == null)
+            {
+#pragma warning disable CS0618
+                return new ProtoWriter(dest, model, context);
+#pragma warning restore CS0618
+            }
+            Init(writer, dest, model, context);
+            return writer;
+        }
+
+        #if !PLAT_NO_THREADSTATIC
+        [ThreadStatic]
+        private static ProtoWriter lastWriter;
+
+        private static ProtoWriter GetRecycled()
+        {
+            ProtoWriter tmp = lastWriter;
+            lastWriter = null;
+            return tmp;
+        }
+        internal static void Recycle(ProtoWriter writer)
+        {
+            if (writer != null)
+            {
+                lastWriter = writer;
+            }
+        }
+        #elif !PLAT_NO_INTERLOCKED
+        private static object lastWriter;
+        private static ProtoWriter GetRecycled()
+        {
+            return (ProtoWriter)System.Threading.Interlocked.Exchange(ref lastWriter, null);
+        }
+        internal static void Recycle(ProtoWriter writer)
+        {
+            if(writer != null)
+            {
+                System.Threading.Interlocked.Exchange(ref lastWriter, writer);
+            }
+        }
+        #else
+        private static readonly object recycleLock = new object();
+        private static ProtoWriter lastWriter;
+        private static ProtoWriter GetRecycled()
+        {
+            lock(recycleLock)
+            {
+                ProtoWriter tmp = lastWriter;
+                lastWriter = null;
+                return tmp;
+            }            
+        }
+        internal static void Recycle(ProtoWriter writer)
+        {
+            if(writer != null)
+            {
+                lock(recycleLock)
+                {
+                    lastWriter = writer;
+                }
+            }
+        }
+        #endif
+        #endregion
     }
+    
+    
 }

@@ -31,6 +31,10 @@ namespace ProtoBuf.Serializers
         private readonly CallbackSet callbacks;
         private readonly MethodInfo[] baseCtorCallbacks;
         private readonly MethodInfo factory;
+        // ========================================================
+        // added by wsh @ 2017-07-01 for net data pool
+        private readonly TypeModel model;
+        // ========================================================
         public TypeSerializer(TypeModel model, Type forType, int[] fieldNumbers, IProtoSerializer[] serializers, MethodInfo[] baseCtorCallbacks, bool isRootType, bool useConstructor, CallbackSet callbacks, Type constructType, MethodInfo factory)
         {
             Helpers.DebugAssert(forType != null);
@@ -49,6 +53,8 @@ namespace ProtoBuf.Serializers
                     hasSubTypes = true;
                 }
             }
+
+            this.model = model;
             this.forType = forType;
             this.factory = factory;
 #if COREFX || PROFILE259
@@ -304,30 +310,40 @@ namespace ProtoBuf.Serializers
         object CreateInstance(ProtoReader source, bool includeLocalCallback)
         {
             //Helpers.DebugWriteLine("* creating : " + forType.FullName);
-            object obj;
-            if (factory != null)
+            object obj = null;
+            if (model.netDataPoolDelegate != null)
             {
-                obj = InvokeCallback(factory, null, source.Context);
+                // ========================================================
+                // added by wsh @ 2017-07-01 for net data pool
+                obj = model.netDataPoolDelegate(constructType);
+                // ========================================================
             }
-            else if (useConstructor)
+            if (obj == null)
             {
-                if (!hasConstructor) TypeModel.ThrowCannotCreateInstance(constructType);
-#if PROFILE259
+                if (factory != null)
+                {
+                    obj = InvokeCallback(factory, null, source.Context);
+                }
+                else if (useConstructor)
+                {
+                    if (!hasConstructor) TypeModel.ThrowCannotCreateInstance(constructType);
+                    #if PROFILE259
 	            ConstructorInfo constructorInfo = System.Linq.Enumerable.First(
                     constructType.GetTypeInfo().DeclaredConstructors, c => c.GetParameters().Length == 0);
 	            obj = constructorInfo.Invoke(new object[] {});
 
-#else
-                obj = Activator.CreateInstance(constructType
-#if !(CF || PORTABLE  || NETSTANDARD1_3 || NETSTANDARD1_4 || UAP)
-                    , nonPublic: true
-#endif
+                    #else
+                    obj = Activator.CreateInstance(constructType
+                        #if !(CF || PORTABLE  || NETSTANDARD1_3 || NETSTANDARD1_4 || UAP)
+                        , nonPublic: true
+                        #endif
                     );
-#endif
-            }
-            else
-            {
-                obj = BclHelpers.GetUninitializedObject(constructType);
+                    #endif
+                }
+                else
+                {
+                    obj = BclHelpers.GetUninitializedObject(constructType);
+                }
             }
             ProtoReader.NoteObject(obj, source);
             if (baseCtorCallbacks != null)

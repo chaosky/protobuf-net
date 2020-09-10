@@ -3,6 +3,7 @@ using System;
 using System.Reflection;
 
 using ProtoBuf.Meta;
+using CustomDataStruct;
 
 namespace ProtoBuf.Serializers
 {
@@ -62,7 +63,14 @@ namespace ProtoBuf.Serializers
         {
             Helpers.DebugAssert(value != null);
             value = property.GetValue(value, null);
-            if (value != null) Tail.Write(value, dest);
+            if (value != null)
+            {
+                if (value.GetType().IsValueType)
+                {
+                    value = ValueObject.Get(value);
+                }
+                Tail.Write(value, dest);
+            }
         }
 
         public override object Read(object value, ProtoReader source)
@@ -70,16 +78,20 @@ namespace ProtoBuf.Serializers
             Helpers.DebugAssert(value != null);
 
             object oldVal = Tail.RequiresOldValue ? property.GetValue(value, null) : null;
+            if (oldVal != null && oldVal.GetType().IsValueType)
+            {
+                oldVal = ValueObject.Get(value);
+            }
             object newVal = Tail.Read(oldVal, source);
             if (readOptionsWriteValue && newVal != null) // if the tail returns a null, intepret that as *no assign*
             {
                 if (shadowSetter == null)
                 {
-                    property.SetValue(value, newVal, null);
+                    property.SetValue(value, ValueObject.ToObject(newVal), null);
                 }
                 else
                 {
-                    shadowSetter.Invoke(value, new object[] { newVal });
+                    shadowSetter.Invoke(value, new object[] { ValueObject.ToObject(newVal) });
                 }
             }
             return null;

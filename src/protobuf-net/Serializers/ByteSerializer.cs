@@ -1,4 +1,5 @@
 ﻿#if !NO_RUNTIME
+using CustomDataStruct;
 using System;
 
 namespace ProtoBuf.Serializers
@@ -17,13 +18,13 @@ namespace ProtoBuf.Serializers
 
         public void Write(object value, ProtoWriter dest)
         {
-            ProtoWriter.WriteByte((byte)value, dest);
+            ProtoWriter.WriteByte(ValueObject.Value<byte>(value), dest);
         }
 
         public object Read(object value, ProtoReader source)
         {
             Helpers.DebugAssert(value == null); // since replaces
-            return source.ReadByte();
+            return ValueObject.Get(source.ReadByte());
         }
 
 #if FEAT_COMPILER

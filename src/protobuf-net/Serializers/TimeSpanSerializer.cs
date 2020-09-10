@@ -1,4 +1,5 @@
 ﻿#if !NO_RUNTIME
+using CustomDataStruct;
 using System;
 
 namespace ProtoBuf.Serializers
@@ -22,12 +23,12 @@ namespace ProtoBuf.Serializers
         {
             if (wellKnown)
             {
-                return BclHelpers.ReadDuration(source);
+                return ValueObject.Get(BclHelpers.ReadDuration(source));
             }
             else
             {
                 Helpers.DebugAssert(value == null); // since replaces
-                return BclHelpers.ReadTimeSpan(source);
+                return ValueObject.Get(BclHelpers.ReadTimeSpan(source));
             }
         }
 
@@ -35,11 +36,11 @@ namespace ProtoBuf.Serializers
         {
             if (wellKnown)
             {
-                BclHelpers.WriteDuration((TimeSpan)value, dest);
+                BclHelpers.WriteDuration(ValueObject.Value<TimeSpan>(value), dest);
             }
             else
             {
-                BclHelpers.WriteTimeSpan((TimeSpan)value, dest);
+                BclHelpers.WriteTimeSpan(ValueObject.Value<TimeSpan>(value), dest);
             }
         }
 

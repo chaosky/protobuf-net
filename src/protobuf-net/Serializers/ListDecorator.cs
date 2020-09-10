@@ -1,8 +1,10 @@
 ﻿#if !NO_RUNTIME
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using ProtoBuf.Meta;
 using System.Reflection;
+using CustomDataStruct;
 
 namespace ProtoBuf.Serializers
 {
@@ -494,11 +496,28 @@ namespace ProtoBuf.Serializers
                 token = new SubItemToken(); // default
             }
             bool checkForNull = !SupportNull;
-            foreach (object subItem in (IEnumerable)value)
+            if (value is IList list)
             {
-                if (checkForNull && subItem == null) { throw new NullReferenceException(); }
-                Tail.Write(subItem, dest);
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var subItem = list[i];
+                    if (checkForNull && subItem == null) { throw new NullReferenceException(); }
+                    Tail.Write(ValueObject.TryGet(subItem), dest);
+                }
             }
+            else
+            {
+                // TODO-GC：对于值类型的列表，这里严重GC
+                // 1）GeGetEnumerator产生GC40B
+                // 2）每次GetCurrent产生GC20B
+                foreach (object subItem in (IEnumerable)value)
+                {
+                    if (checkForNull && subItem == null) { throw new NullReferenceException(); }
+                    Tail.Write(ValueObject.TryGet(subItem), dest);
+                }
+            }
+            
+            
             if (writePacked)
             {
                 if (fixedSizePacked)
@@ -552,7 +571,8 @@ namespace ProtoBuf.Serializers
                         IList list = (IList)value;
                         do
                         {
-                            list.Add(Tail.Read(null, source));
+                            // TODO-GC：使用IList来实现的话装箱是不可避免的
+                            list.Add(ValueObject.ToObject(Tail.Read(null, source)));
                         } while (source.TryReadFieldHeader(field));
                     }
                     else

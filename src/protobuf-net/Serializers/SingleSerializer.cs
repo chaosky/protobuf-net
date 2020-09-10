@@ -1,6 +1,7 @@
 ﻿#if !NO_RUNTIME
 using System;
 using ProtoBuf.Meta;
+using CustomDataStruct;
 
 namespace ProtoBuf.Serializers
 {
@@ -21,12 +22,12 @@ namespace ProtoBuf.Serializers
         public object Read(object value, ProtoReader source)
         {
             Helpers.DebugAssert(value == null); // since replaces
-            return source.ReadSingle();
+            return ValueObject.Get(source.ReadSingle());
         }
 
         public void Write(object value, ProtoWriter dest)
         {
-            ProtoWriter.WriteSingle((float)value, dest);
+            ProtoWriter.WriteSingle(ValueObject.Value<float>(value), dest);
         }
 
 

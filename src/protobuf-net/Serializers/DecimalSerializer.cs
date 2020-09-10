@@ -1,5 +1,6 @@
 ﻿#if !NO_RUNTIME
 using System;
+using CustomDataStruct;
 
 namespace ProtoBuf.Serializers
 {
@@ -18,12 +19,12 @@ namespace ProtoBuf.Serializers
         public object Read(object value, ProtoReader source)
         {
             Helpers.DebugAssert(value == null); // since replaces
-            return BclHelpers.ReadDecimal(source);
+            return ValueObject.Get(BclHelpers.ReadDecimal(source));
         }
 
         public void Write(object value, ProtoWriter dest)
         {
-            BclHelpers.WriteDecimal((decimal)value, dest);
+            BclHelpers.WriteDecimal(ValueObject.Value<decimal>(value), dest);
         }
 
 #if FEAT_COMPILER

@@ -134,6 +134,7 @@ namespace ProtoBuf
                 stringInterner = null;
             }
             if (netCache != null) netCache.Clear();
+            // Recycle(this);
         }
         internal int TryReadUInt32VariantWithoutMoving(bool trimNegative, out uint value)
         {
@@ -876,7 +877,8 @@ namespace ProtoBuf
         /// <summary>
         /// Reads a byte-sequence from the stream, appending them to an existing byte-sequence (which can be null); supported wire-types: String
         /// </summary>
-        public static byte[] AppendBytes(byte[] value, ProtoReader reader)
+        public static byte[] AppendBytes(byte[] value, ProtoReader reader, 
+            TypeModel.BufferPoolDelegate bufferPoolDelegate = null)
         {
             if (reader == null) throw new ArgumentNullException(nameof(reader));
             switch (reader.wireType)
@@ -889,12 +891,28 @@ namespace ProtoBuf
                     if (value == null || value.Length == 0)
                     {
                         offset = 0;
-                        value = new byte[len];
+                        if (bufferPoolDelegate != null)
+                        {
+                            value = bufferPoolDelegate(len);
+                        }
+                        else
+                        {
+                            value = new byte[len];
+                        }
                     }
                     else
                     {
+                        // TODO：这里还有漏洞，但是我们目前的项目不会走到这
                         offset = value.Length;
-                        byte[] tmp = new byte[value.Length + len];
+                        byte[] tmp = null;
+                        if (bufferPoolDelegate != null)
+                        {
+                            tmp = bufferPoolDelegate(len);
+                        }
+                        else
+                        {
+                            tmp = new byte[value.Length + len];
+                        }
                         Buffer.BlockCopy(value, 0, tmp, 0, value.Length);
                         value = tmp;
                     }
@@ -1220,10 +1238,16 @@ namespace ProtoBuf
             try
             {
                 //TODO: replace this with stream-based, buffered raw copying
-                using (ProtoWriter writer = ProtoWriter.Create(dest, model, null))
+                ProtoWriter writer = null;
+                try
                 {
+                    writer = ProtoWriter.Create(dest, model, null);
                     AppendExtensionField(writer);
                     writer.Close();
+                }
+                finally
+                {
+                    ProtoWriter.Recycle(writer);
                 }
                 commit = true;
             }

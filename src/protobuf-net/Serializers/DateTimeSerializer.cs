@@ -1,4 +1,5 @@
 ﻿#if !NO_RUNTIME
+using CustomDataStruct;
 using System;
 using System.Reflection;
 
@@ -25,23 +26,23 @@ namespace ProtoBuf.Serializers
         {
             if (wellKnown)
             {
-                return BclHelpers.ReadTimestamp(source);
+                return ValueObject.Get(BclHelpers.ReadTimestamp(source));
             }
             else
             {
                 Helpers.DebugAssert(value == null); // since replaces
-                return BclHelpers.ReadDateTime(source);
+                return ValueObject.Get(BclHelpers.ReadDateTime(source));
             }
         }
 
         public void Write(object value, ProtoWriter dest)
         {
             if (wellKnown)
-                BclHelpers.WriteTimestamp((DateTime)value, dest);
+                BclHelpers.WriteTimestamp(ValueObject.Value<DateTime>(value), dest);
             else if (includeKind)
-                BclHelpers.WriteDateTimeWithKind((DateTime)value, dest);
+                BclHelpers.WriteDateTimeWithKind(ValueObject.Value<DateTime>(value), dest);
             else
-                BclHelpers.WriteDateTime((DateTime)value, dest);
+                BclHelpers.WriteDateTime(ValueObject.Value<DateTime>(value), dest);
         }
 #if FEAT_COMPILER
         void IProtoSerializer.EmitWrite(Compiler.CompilerContext ctx, Compiler.Local valueFrom)
